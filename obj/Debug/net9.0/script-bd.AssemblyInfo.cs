@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("script-bd")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1866869364418c3964f425e97c5b100e2c213e34")]
 [assembly: System.Reflection.AssemblyProductAttribute("script-bd")]
 [assembly: System.Reflection.AssemblyTitleAttribute("script-bd")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

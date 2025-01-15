@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\lucas\\projetos\\script-c\\script-bd\\script-bd.csproj": {}
+    "C:\\Users\\lucas\\projetos\\script-cp\\script-bd\\script-bd.csproj": {}
   },
   "projects": {
-    "C:\\Users\\lucas\\projetos\\script-c\\script-bd\\script-bd.csproj": {
+    "C:\\Users\\lucas\\projetos\\script-cp\\script-bd\\script-bd.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\lucas\\projetos\\script-c\\script-bd\\script-bd.csproj",
+        "projectUniqueName": "C:\\Users\\lucas\\projetos\\script-cp\\script-bd\\script-bd.csproj",
         "projectName": "script-bd",
-        "projectPath": "C:\\Users\\lucas\\projetos\\script-c\\script-bd\\script-bd.csproj",
+        "projectPath": "C:\\Users\\lucas\\projetos\\script-cp\\script-bd\\script-bd.csproj",
         "packagesPath": "C:\\Users\\lucas\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\lucas\\projetos\\script-c\\script-bd\\obj\\",
+        "outputPath": "C:\\Users\\lucas\\projetos\\script-cp\\script-bd\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\lucas\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -65,7 +65,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.101/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.102/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

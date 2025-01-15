@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "RVontuscCOY=",
+  "dgSpecHash": "LCzeAmHyoJs=",
   "success": true,
-  "projectFilePath": "C:\\Users\\lucas\\projetos\\script-c\\script-bd\\script-bd.csproj",
+  "projectFilePath": "C:\\Users\\lucas\\projetos\\script-cp\\script-bd\\script-bd.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\lucas\\.nuget\\packages\\firebirdsql.data.firebirdclient\\10.3.2\\firebirdsql.data.firebirdclient.10.3.2.nupkg.sha512"
   ],

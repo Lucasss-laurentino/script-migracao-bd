@@ -4,15 +4,16 @@ using System.Threading.Tasks;
 using System.Data.Common;
 using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 class IntegrationToFirebird {
 
     static async Task Main() {
 
-        string configPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "BANCODEDADOS.FDB");
+        string configPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "BANCODEDADOS2.FDB");
         string confBD = $"User=SYSDBA;Password=masterkey;Database={configPath};DataSource=127.0.0.1;Port=3050;Dialect=3";
 
-        string configPathNewBd = Path.Combine(Directory.GetCurrentDirectory(), "..", "BANCODEDADOS2.FDB");
+        string configPathNewBd = Path.Combine(Directory.GetCurrentDirectory(), "..", "BANCODEDADOS.FDB");
         string novoConfBd = $"User=SYSDBA;Password=masterkey;Database={configPathNewBd};DataSource=127.0.0.1;Port=3050;Dialect=3";
 
         try {
@@ -130,12 +131,12 @@ class IntegrationToFirebird {
                     // Inserir unidades
                     foreach (var linhaMorador in moradoresComTV) {
                         // filtrar unidades
-                        string unidade = linhaMorador["UNIDADE"]?.ToString().Replace("TV", "BLOCO 1");
+                        string? unidade = linhaMorador["UNIDADE"]?.ToString()?.Replace("TV", "BLOCO 1");
                         
                         int andar = 0;
                         int apt = 0;
                         
-                        ExtrairAndarEApt(unidade, out andar, out apt);
+                        ExtrairAndarEApt(unidade != null ? unidade : "", out andar, out apt);
                         
                         string timestamp = GerarTimestamp();
                         string queryInsertUnidade = $"INSERT INTO UNIDADE (NUMVAGAS, DATAHORACADASTRO, OPERADORCADASTRO, DATAHORAALTERACAO, OPERADORALTERACAO, OBS, UNIDADE, ANDAR_QUADRA, APTO_LOTE, BLOCO, VAGAS_OCUPADAS, NUMVAGAS2) VALUES (1, '{timestamp}', 'LINEAR', NULL, NULL, 'INSERIDO POR SCRIPT-CP', '{unidade}', {andar}, {apt}, 1, 0, NULL )";
@@ -147,9 +148,100 @@ class IntegrationToFirebird {
                     
                 }
             }
+         
+            // feedback
+           string mensagemConcluido = @"
+            *************************************************************
+            *                                                           *
+            *                  SCRIPT CONCLUIDO COM SUCESSO!            *
+            *                                                           *
+            *************************************************************
+                           |    
+                          / \      
+                         / _ \    
+                        | (_) |   
+                        |  _  |   
+                        | (_) |   
+                        |_____|   
+                         |   |   
+                         |   |   
+                        /     \   
+                       /_______\  
+                      |  _____  |  
+                      | |     | |   
+                      | |     | |   
+                      | |_____| |   
+                     /___________\
+            ============================================================
+            |  O SCRIPT CONCLUIDO COM SUCESSO!                      |
+            ============================================================
+            ";
+
+
+            // Salva a mensagem de erro em um arquivo temporário
+            string tempFilePath = Path.Combine(Path.GetTempPath(), "erro_mensagem.txt");
+            File.WriteAllText(tempFilePath, mensagemConcluido);
+
+            ProcessStartInfo startInfo = new ProcessStartInfo()
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/k type \"{tempFilePath}\"",
+                CreateNoWindow = false,  
+                UseShellExecute = true
+            };
+
+            // Inicia o processo para abrir o terminal e mostrar a mensagem
+            Process.Start(startInfo);
+        
+        
         } catch(Exception error) {
-            Console.WriteLine(error);
-            Console.WriteLine("ENTROU NO CATH");
+            // Para acessar detalhes do Firebird, como o código de erro, se for uma exceção específica de Firebird
+            if (error is FirebirdSql.Data.FirebirdClient.FbException fbError)
+            {
+                // Acessando propriedades específicas do erro do Firebird
+               if(fbError.ErrorCode == 335544344) {
+                     // Desenhando "ERRO" de forma estilizada com Console.WriteLine
+                    string mensagemErro = @"
+                    EEEEE   RRRRR   RRRRR   OOOOOOO  
+                    E       R    R  R    R  O     O 
+                    EEEE    RRRRR   RRRRR   O     O 
+                    E       R   R   R   R   O     O 
+                    EEEEE   R    R  R    R  OOOOOOO  
+
+                    =============================================
+                    |            ERRO: Banco de Dados          |
+                    |     Nao foi possivel acessar o banco.    |
+                    =============================================
+                    
+                    SOLUCOES POSSIVEIS:
+
+                    1. Verifique se os arquivos 'BANCODEDADOS.FDB' e 'BANCODEDADOS2.FDB' estao
+                    no mesmo diretorio que o script.
+
+                    2. O banco de dados 'BANCODEDADOS2.FDB' deve ser o banco filtrado, e
+                    'BANCODEDADOS.FDB' deve ser o banco que recebera os novos dados.
+
+                    =========================================================
+                    Corrija o caminho ou nome dos arquivos e tente novamente.
+                    =========================================================
+                    ";
+
+                    // Salva a mensagem de erro em um arquivo temporário
+                    string tempFilePath = Path.Combine(Path.GetTempPath(), "erro_mensagem.txt");
+                    File.WriteAllText(tempFilePath, mensagemErro);
+
+                    ProcessStartInfo startInfo = new ProcessStartInfo()
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = $"/k type \"{tempFilePath}\"",
+                        CreateNoWindow = false,  
+                        UseShellExecute = true
+                    };
+
+                    // Inicia o processo para abrir o terminal e mostrar a mensagem
+                    Process.Start(startInfo);
+               }
+            }
         }
     }
 

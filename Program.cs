@@ -1,9 +1,9 @@
-﻿using FirebirdSql.Data.FirebirdClient; // importação necessária pra trabalhar com firebird
-using System;
+﻿using FirebirdSql.Data.FirebirdClient;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Data.Common;
 using System.IO;
+using System.Collections.Generic;
 
 class IntegrationToFirebird {
 
@@ -16,8 +16,9 @@ class IntegrationToFirebird {
         string novoConfBd = $"User=SYSDBA;Password=masterkey;Database={configPathNewBd};DataSource=127.0.0.1;Port=3050;Dialect=3";
 
         try {
+            // filtrando dados banco 1
             using (FbConnection connect = new FbConnection(confBD)) {
-                // abrinco conexão
+                // abrindo conexão
                 await connect.OpenAsync().ConfigureAwait(false);
 
                 string query = "SELECT * FROM MORADORES";
@@ -73,25 +74,45 @@ class IntegrationToFirebird {
                     }
                 }
 
+                // Inserindo dados no banco 2
                 using (FbConnection novoConnect = new FbConnection(novoConfBd)) {
                     await novoConnect.OpenAsync().ConfigureAwait(false);
                     
+                    // excluindo dados duplicados
+                    moradoresComTV = moradoresComTV.Distinct().ToList();
+
+                    // Obter os campos válidos da tabela "MORADORES"
+                    List<string> camposValidos = ObterCamposTabela(novoConnect, "MORADORES");
+
                     // Inserir os moradores com "TV"
                     foreach (var morador in moradoresComTV)
                     {
-                        var insertMoradorQuery = GenerateInsertQuery("MORADORES", morador);
+                         // Filtrar somente os campos que existem na tabela
+                        var moradorFiltrado = morador
+                            .Where(kvp => camposValidos.Contains(kvp.Key.ToUpper())) // Certifique-se de comparar em maiúsculas
+                            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+                        // Gerar a query com os campos filtrados
+                        var insertMoradorQuery = GenerateInsertQuery("MORADORES", moradorFiltrado);
                         FbCommand cmdInsertMorador = new FbCommand(insertMoradorQuery, novoConnect);
 
-                        // Adicionar parâmetros ao comando dinamicamente
-                        foreach (var item in morador)
+                        // Adicionar os parâmetros ao comando
+                        foreach (var item in moradorFiltrado)
                         {
-                            cmdInsertMorador.Parameters.AddWithValue($"@{item.Key}", item.Value);
+                            if(item.Key == "UNIDADE") {
+                                string unidade = (string)item.Value;
+                                string unidadeChanged = unidade.Replace("TV", "BLOCO 1");
+                                cmdInsertMorador.Parameters.AddWithValue($"@{item.Key}", unidadeChanged);
+                            } else {
+                                cmdInsertMorador.Parameters.AddWithValue($"@{item.Key}", item.Value);
+                            }
                         }
 
+                        // Executar o comando
                         await cmdInsertMorador.ExecuteNonQueryAsync().ConfigureAwait(false);
                     }
 
-                    // Inserir os registros de CID_USUARIOS
+                    // // Inserir os registros de CID_USUARIOS
                     foreach (var usuario in cidUsuariosFiltrados)
                     {
                         var insertCidUsuarioQuery = GenerateInsertQuery("CID_USUARIOS", usuario);
@@ -105,10 +126,30 @@ class IntegrationToFirebird {
 
                         await cmdInsertCidUsuario.ExecuteNonQueryAsync().ConfigureAwait(false);
                     }
+
+                    // Inserir unidades
+                    foreach (var linhaMorador in moradoresComTV) {
+                        // filtrar unidades
+                        string unidade = linhaMorador["UNIDADE"]?.ToString().Replace("TV", "BLOCO 1");
+                        
+                        int andar = 0;
+                        int apt = 0;
+                        
+                        ExtrairAndarEApt(unidade, out andar, out apt);
+                        
+                        string timestamp = GerarTimestamp();
+                        string queryInsertUnidade = $"INSERT INTO UNIDADE (NUMVAGAS, DATAHORACADASTRO, OPERADORCADASTRO, DATAHORAALTERACAO, OPERADORALTERACAO, OBS, UNIDADE, ANDAR_QUADRA, APTO_LOTE, BLOCO, VAGAS_OCUPADAS, NUMVAGAS2) VALUES (1, '{timestamp}', 'LINEAR', NULL, NULL, 'INSERIDO POR SCRIPT-CP', '{unidade}', {andar}, {apt}, 1, 0, NULL )";
+
+                        FbCommand unidadeInsert = new FbCommand(queryInsertUnidade, novoConnect);           
+
+                        await unidadeInsert.ExecuteNonQueryAsync().ConfigureAwait(false);
+                    }
+                    
                 }
             }
         } catch(Exception error) {
             Console.WriteLine(error);
+            Console.WriteLine("ENTROU NO CATH");
         }
     }
 
@@ -119,4 +160,64 @@ class IntegrationToFirebird {
         var parameters = string.Join(", ", data.Keys.Select(k => $"@{k}"));
         return $"INSERT INTO {tableName} ({columns}) VALUES ({parameters})";
     }
+
+     static string GerarTimestamp()
+    {
+        return DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
+    static void ExtrairAndarEApt(string input, out int andar, out int apt)
+    {
+        // Inicializar as variáveis
+        andar = 0;
+        apt = 0;
+
+        // Encontrar a posição da palavra "BLOCO"
+        int blocoIndex = input.IndexOf("BLOCO");
+
+        // Capturar os números antes de "BLOCO"
+        string numerosAntesDeBloco = input.Substring(0, blocoIndex).Trim();
+
+        // Verificar se há 4 ou mais dígitos antes da palavra "BLOCO"
+        if (numerosAntesDeBloco.Length >= 4)
+        {
+            // Pegar os dois primeiros números como andar
+            andar = int.Parse(numerosAntesDeBloco.Substring(0, 2));
+        }
+        else
+        {
+            // Pegar apenas o primeiro número como andar
+            andar = int.Parse(numerosAntesDeBloco.Substring(0, 1));
+        }
+
+        // Extrair o último número antes de "BLOCO" como apt
+        apt = int.Parse(numerosAntesDeBloco.Substring(numerosAntesDeBloco.Length - 1));
+    }
+
+    public static List<string> ObterCamposTabela(FbConnection connection, string tableName)
+    {
+        List<string> colunas = new List<string>();
+        
+        string query = @"
+            SELECT TRIM(R.RDB$FIELD_NAME) AS FIELD_NAME
+            FROM RDB$RELATION_FIELDS R
+            WHERE R.RDB$RELATION_NAME = @TableName
+            ORDER BY R.RDB$FIELD_POSITION";
+        
+        using (FbCommand cmd = new FbCommand(query, connection))
+        {
+            cmd.Parameters.AddWithValue("@TableName", tableName.ToUpper());
+            
+            using (FbDataReader reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    colunas.Add(reader["FIELD_NAME"].ToString());
+                }
+            }
+        }
+
+        return colunas;
+    }
+
 }
